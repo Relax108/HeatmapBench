@@ -32,11 +32,29 @@ The OpenGL choices need a graphics driver with OpenGL 3.3 and the
 They will not work over most remote-desktop sessions or in a virtual machine
 without GPU passthrough.
 
+## Inflow
+
+Each grid has its own background thread. Every cycle (30 ms by default) it
+sends a burst of chunks one after another (200 by default, 5,000 points each),
+then waits for the next cycle. That is 1,000,000 points per cycle, about 33
+million points a second, per grid. All three numbers are boxes in the window,
+and the results show the rate actually achieved as "chunks/s" and "points M/s".
+
+"Moving window" drops the points into a small area that drifts across the
+grid, so only a small rectangle changes per frame. "Scattered" spreads them
+over the whole grid, so the whole grid changes every frame; use it for the
+worst case.
+
+The points are synthetic. Generating them takes roughly as long as writing
+them, and both are counted in "Producer cycle work"; in a real application the
+generation is replaced by acquisition.
+
 ## What the numbers mean (milliseconds)
 
 | Row | Meaning |
 |---|---|
-| Producer buffer write | The background thread writing one batch into the grid |
+| Producer chunk write | The background thread writing one chunk into the grid |
+| Producer cycle work | The background thread generating and writing all of one cycle's chunks. It must stay below the producer cycle time, or the requested inflow is not being delivered. |
 | Dispatcher wait | Timer tick until the render callback starts on the UI thread |
 | Update() | Bringing the renderer's copy of the data up to date |
 | Refresh() call | The call that asks for the image to be shown |
@@ -59,7 +77,8 @@ the same 4,096-entry lookup table built from it.
 
 - `Core/` is the renderer-independent pipeline from the handoff (`DataChunk`,
   `HeatmapBuffer`, `DataProcessor`, `IHeatmapRenderer`, `RenderScheduler`,
-  `HeatmapViewModel`) plus `SyntheticProducer`, `FrameStats` and `RangeColormap`.
+  `HeatmapViewModel`) plus `SyntheticProducer`, `FrameStats`, `RangeColormap`
+  and `ColourConverter` (the cell-to-pixel loop the WriteableBitmap renderer uses).
 - `Renderers/` holds one class per renderer. `GlHeatmapPipeline` is the OpenGL
   part of the GPU renderer and has no WPF dependency. A new renderer implements
   `IHeatmapRenderer` and is added to the choice in `MainWindow.xaml.cs`.

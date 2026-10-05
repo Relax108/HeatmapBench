@@ -66,13 +66,16 @@ public sealed class TimingSeries
 public sealed class FrameStats
 {
     private readonly long _recordAfter;
+    private readonly int _pointsPerChunk;
 
     /// <param name="warmUp">Samples taken during this time are dropped, to keep JIT and first-frame costs out.</param>
-    public FrameStats(TimeSpan warmUp)
+    public FrameStats(TimeSpan warmUp, int pointsPerChunk)
     {
         _recordAfter = Stopwatch.GetTimestamp() + (long)(warmUp.TotalSeconds * Stopwatch.Frequency);
+        _pointsPerChunk = pointsPerChunk;
 
-        ProducerWrite = new TimingSeries("Producer buffer write", _recordAfter);
+        ProducerWrite = new TimingSeries("Producer chunk write", _recordAfter);
+        ProducerCycle = new TimingSeries("Producer cycle work", _recordAfter);
         DispatcherWait = new TimingSeries("Dispatcher wait", _recordAfter);
         Update = new TimingSeries("Update()", _recordAfter);
         Refresh = new TimingSeries("Refresh() call", _recordAfter);
@@ -80,8 +83,14 @@ public sealed class FrameStats
         Frame = new TimingSeries("Tick to UI idle", _recordAfter);
     }
 
-    /// <summary>Time the producer spends writing one batch into the grid.</summary>
+    /// <summary>Time the producer spends writing one chunk into the grid.</summary>
     public TimingSeries ProducerWrite { get; }
+
+    /// <summary>
+    /// Time the producer needs for one whole cycle: generating and writing every chunk.
+    /// If this reaches the cycle time, the producer cannot deliver the requested rate.
+    /// </summary>
+    public TimingSeries ProducerCycle { get; }
 
     /// <summary>Timer tick until the render callback starts on the UI thread.</summary>
     public TimingSeries DispatcherWait { get; }
@@ -105,10 +114,13 @@ public sealed class FrameStats
         }
 
         var sb = new StringBuilder();
+        double chunksPerSecond = ProducerWrite.Count / seconds;
         sb.AppendLine(
-            $"{title}   frames {Update.Count / seconds:F1}/s   batches {ProducerWrite.Count / seconds:F1}/s");
+            $"{title}   frames {Update.Count / seconds:F1}/s   chunks {chunksPerSecond:F0}/s   " +
+            $"points {chunksPerSecond * _pointsPerChunk / 1e6:F2} M/s");
         sb.AppendLine($"  {"(ms)",-22}{"mean",8}{"p50",8}{"p95",8}{"p99",8}{"max",8}");
         ProducerWrite.AppendSummary(sb);
+        ProducerCycle.AppendSummary(sb);
         DispatcherWait.AppendSummary(sb);
         Update.AppendSummary(sb);
         Refresh.AppendSummary(sb);

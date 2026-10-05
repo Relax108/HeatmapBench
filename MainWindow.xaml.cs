@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         bool PartialUpdates,
         bool Scattered,
         int PointCount,
+        int ChunksPerCycle,
         int CycleMs,
         int RenderIntervalMs);
 
@@ -80,6 +81,7 @@ public partial class MainWindow : Window
         if (!TryParseSize(GridABox.Text, out int widthA, out int heightA) ||
             !TryParseSize(GridBBox.Text, out int widthB, out int heightB) ||
             !TryParsePositive(PointsBox.Text, out int pointCount) ||
+            !TryParsePositive(ChunksBox.Text, out int chunksPerCycle) ||
             !TryParsePositive(CycleBox.Text, out int cycleMs) ||
             !TryParsePositive(IntervalBox.Text, out int intervalMs))
         {
@@ -92,6 +94,7 @@ public partial class MainWindow : Window
             PartialUpdates: PartialBox.IsChecked == true,
             Scattered: PatternBox.SelectedIndex == 1,
             PointCount: pointCount,
+            ChunksPerCycle: chunksPerCycle,
             CycleMs: cycleMs,
             RenderIntervalMs: intervalMs);
 
@@ -100,8 +103,9 @@ public partial class MainWindow : Window
         _header =
             $"Renderer: {RendererNames[(int)settings.Renderer]}\n" +
             $"Partial updates: {(!supportsPartial ? "not supported" : settings.PartialUpdates ? "on" : "off")}\n" +
-            $"Points: {settings.PointCount} per batch, {(settings.Scattered ? "scattered" : "moving window")}\n" +
-            $"Producer cycle: {settings.CycleMs} ms   Render interval: {settings.RenderIntervalMs} ms\n";
+            $"Inflow per grid: {settings.ChunksPerCycle} chunks of {settings.PointCount} points every {settings.CycleMs} ms" +
+            $" ({(double)settings.ChunksPerCycle * settings.PointCount * 1000 / settings.CycleMs / 1e6:F2} M points/s)\n" +
+            $"Points: {(settings.Scattered ? "scattered" : "moving window")}   Render interval: {settings.RenderIntervalMs} ms\n";
 
         HostA.Content = AddHeatmap("Grid A", widthA, heightA, seed: 1, settings);
         HostB.Content = AddHeatmap("Grid B", widthB, heightB, seed: 2, settings);
@@ -114,7 +118,7 @@ public partial class MainWindow : Window
     private FrameworkElement AddHeatmap(string name, int width, int height, int seed, Settings settings)
     {
         var buffer = new HeatmapBuffer(width, height);
-        var stats = new FrameStats(warmUp: TimeSpan.FromSeconds(1));
+        var stats = new FrameStats(warmUp: TimeSpan.FromSeconds(1), settings.PointCount);
 
         RangeColormap colormap = RangeColormap.Amplitude;
         IHeatmapRenderer renderer = settings.Renderer switch
@@ -132,7 +136,7 @@ public partial class MainWindow : Window
         _running.Add(new HeatmapViewModel(
             Dispatcher, buffer, renderer, stats, settings.RenderIntervalMs, settings.PartialUpdates));
         _running.Add(new SyntheticProducer(
-            buffer, stats.ProducerWrite, settings.PointCount, settings.CycleMs, settings.Scattered, seed));
+            buffer, stats, settings.PointCount, settings.ChunksPerCycle, settings.CycleMs, settings.Scattered, seed));
         _stats.Add(($"{name} {width}x{height}", stats));
 
         return renderer.View;

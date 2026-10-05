@@ -69,30 +69,14 @@ public sealed unsafe class WriteableBitmapHeatmapRenderer : IHeatmapRenderer
             _pending = new Int32Rect(left, top, right - left, bottom - top);
         }
 
-        byte* target = (byte*)_bitmap.BackBuffer;
-        int stride = _bitmap.BackBufferStride;
-        double min = _min;
-        double scale = _scale;
-
-        fixed (double* source = _data)
+        fixed (double* cells = _data)
         fixed (uint* lut = _lut)
         {
-            for (int y = dirty.Y; y < dirty.Y + dirty.Height; y++)
-            {
-                double* src = source + (long)y * _width + dirty.X;
-                uint* dst = (uint*)(target + (long)y * stride) + dirty.X;
-
-                for (int x = 0; x < dirty.Width; x++)
-                {
-                    int index = (int)((src[x] - min) * scale);
-                    if ((uint)index >= LookupSize)
-                    {
-                        index = index < 0 ? 0 : LookupSize - 1;
-                    }
-
-                    dst[x] = lut[index];
-                }
-            }
+            ColourConverter.Convert(
+                cells, _width,
+                (byte*)_bitmap.BackBuffer, _bitmap.BackBufferStride,
+                dirty.X, dirty.Y, dirty.Width, dirty.Height,
+                lut, LookupSize, _min, _scale);
         }
     }
 

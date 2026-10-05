@@ -9,29 +9,41 @@ public sealed class DataProcessor
         _buffer = buffer;
     }
 
-    public void Process(DataChunk chunk)
+    public unsafe void Process(DataChunk chunk)
     {
-        double[,] data = _buffer.Data;
+        int count = chunk.Count;
+        if (count < 0 || count > chunk.X.Length || count > chunk.Y.Length || count > chunk.Value.Length)
+        {
+            throw new ArgumentException("Count is larger than the chunk's arrays.", nameof(chunk));
+        }
+
         int width = _buffer.Width;
         int height = _buffer.Height;
         int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1;
 
-        for (int i = 0; i < chunk.Count; i++)
+        // The grid is addressed as one flat block: indexing double[,] with
+        // [y, x] costs two range checks and an offset calculation per point,
+        // and the range test below already guarantees the cell exists.
+        fixed (double* grid = _buffer.Data)
+        fixed (double* xs = chunk.X, ys = chunk.Y, values = chunk.Value)
         {
-            int x = (int)chunk.X[i];
-            int y = (int)chunk.Y[i];
-
-            if ((uint)x >= (uint)width || (uint)y >= (uint)height)
+            for (int i = 0; i < count; i++)
             {
-                continue;
+                int x = (int)xs[i];
+                int y = (int)ys[i];
+
+                if ((uint)x >= (uint)width || (uint)y >= (uint)height)
+                {
+                    continue;
+                }
+
+                grid[(long)y * width + x] = values[i];
+
+                minX = Math.Min(minX, x);
+                maxX = Math.Max(maxX, x);
+                minY = Math.Min(minY, y);
+                maxY = Math.Max(maxY, y);
             }
-
-            data[y, x] = chunk.Value[i];
-
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
         }
 
         // Cells are written before the region is published, so a render that

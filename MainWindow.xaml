@@ -28,8 +28,10 @@
             <TextBlock Text="Grid B" />
             <TextBox x:Name="GridBBox" Text="830x305" />
 
-            <TextBlock Text="Points per batch" />
-            <TextBox x:Name="PointsBox" Text="500" />
+            <TextBlock Text="Points per chunk" />
+            <TextBox x:Name="PointsBox" Text="5000" />
+            <TextBlock Text="Chunks per cycle" />
+            <TextBox x:Name="ChunksBox" Text="200" Width="50" />
             <TextBlock Text="Producer cycle (ms)" />
             <TextBox x:Name="CycleBox" Text="30" Width="40" />
             <TextBlock Text="Render interval (ms)" />
