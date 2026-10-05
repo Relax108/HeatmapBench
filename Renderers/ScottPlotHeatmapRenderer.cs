@@ -5,17 +5,22 @@ using ScottPlot.WPF;
 
 namespace HeatmapBench.Renderers;
 
-/// <summary>The reference implementation: the current ScottPlot path.</summary>
+/// <summary>
+/// The reference implementation: the current ScottPlot path. With
+/// <c>useOpenGl</c> it uses ScottPlot's OpenGL control instead, which draws the
+/// plot on the GPU but still builds the heatmap bitmap on the CPU.
+/// </summary>
 public sealed class ScottPlotHeatmapRenderer : IHeatmapRenderer
 {
-    private readonly WpfPlot _plot;
+    private readonly WpfPlotBase _plot;
     private readonly ScottPlot.Plottables.Heatmap _heatmap;
 
     private long _paintStart;
 
-    public ScottPlotHeatmapRenderer(double[,] data, double min, double max, RangeColormap colormap, FrameStats stats)
+    public ScottPlotHeatmapRenderer(
+        double[,] data, double min, double max, RangeColormap colormap, FrameStats stats, bool useOpenGl)
     {
-        _plot = new WpfPlot();
+        _plot = useOpenGl ? new WpfPlotGL() : new WpfPlot();
 
         _heatmap = _plot.Plot.Add.Heatmap(data);
         _heatmap.Smooth = false;

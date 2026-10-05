@@ -64,5 +64,6 @@ public sealed class RangeColormap
         return table;
     }
 
-    private static uint Blend(uint from, uint to, double t) => (uint)Math.Round(from + (to - from) * t);
+    // Takes doubles: with unsigned operands, a channel that falls (to < from) would wrap around.
+    private static uint Blend(double from, double to, double t) => (uint)Math.Round(from + (to - from) * t);
 }

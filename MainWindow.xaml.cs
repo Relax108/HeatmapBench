@@ -8,8 +8,24 @@ namespace HeatmapBench;
 
 public partial class MainWindow : Window
 {
+    private enum RendererKind
+    {
+        ScottPlot,
+        ScottPlotOpenGl,
+        WriteableBitmap,
+        OpenGlTexture,
+    }
+
+    private static readonly string[] RendererNames =
+    {
+        "ScottPlot",
+        "ScottPlot, OpenGL control",
+        "WriteableBitmap (CPU)",
+        "OpenGL texture (GPU)",
+    };
+
     private sealed record Settings(
-        bool UseScottPlot,
+        RendererKind Renderer,
         bool PartialUpdates,
         bool Scattered,
         int PointCount,
@@ -72,16 +88,18 @@ public partial class MainWindow : Window
         }
 
         var settings = new Settings(
-            UseScottPlot: RendererBox.SelectedIndex == 0,
+            Renderer: (RendererKind)RendererBox.SelectedIndex,
             PartialUpdates: PartialBox.IsChecked == true,
             Scattered: PatternBox.SelectedIndex == 1,
             PointCount: pointCount,
             CycleMs: cycleMs,
             RenderIntervalMs: intervalMs);
 
+        bool supportsPartial = settings.Renderer is RendererKind.WriteableBitmap or RendererKind.OpenGlTexture;
+
         _header =
-            $"Renderer: {(settings.UseScottPlot ? "ScottPlot" : "WriteableBitmap")}\n" +
-            $"Partial updates: {(settings.UseScottPlot ? "not supported" : settings.PartialUpdates ? "on" : "off")}\n" +
+            $"Renderer: {RendererNames[(int)settings.Renderer]}\n" +
+            $"Partial updates: {(!supportsPartial ? "not supported" : settings.PartialUpdates ? "on" : "off")}\n" +
             $"Points: {settings.PointCount} per batch, {(settings.Scattered ? "scattered" : "moving window")}\n" +
             $"Producer cycle: {settings.CycleMs} ms   Render interval: {settings.RenderIntervalMs} ms\n";
 
@@ -98,9 +116,18 @@ public partial class MainWindow : Window
         var buffer = new HeatmapBuffer(width, height);
         var stats = new FrameStats(warmUp: TimeSpan.FromSeconds(1));
 
-        IHeatmapRenderer renderer = settings.UseScottPlot
-            ? new ScottPlotHeatmapRenderer(buffer.Data, min: 0, max: 100, RangeColormap.Amplitude, stats)
-            : new WriteableBitmapHeatmapRenderer(buffer.Data, min: 0, max: 100, RangeColormap.Amplitude);
+        RangeColormap colormap = RangeColormap.Amplitude;
+        IHeatmapRenderer renderer = settings.Renderer switch
+        {
+            RendererKind.ScottPlot =>
+                new ScottPlotHeatmapRenderer(buffer.Data, min: 0, max: 100, colormap, stats, useOpenGl: false),
+            RendererKind.ScottPlotOpenGl =>
+                new ScottPlotHeatmapRenderer(buffer.Data, min: 0, max: 100, colormap, stats, useOpenGl: true),
+            RendererKind.WriteableBitmap =>
+                new WriteableBitmapHeatmapRenderer(buffer.Data, min: 0, max: 100, colormap),
+            _ =>
+                new OpenGlHeatmapRenderer(buffer.Data, min: 0, max: 100, colormap, stats),
+        };
 
         _running.Add(new HeatmapViewModel(
             Dispatcher, buffer, renderer, stats, settings.RenderIntervalMs, settings.PartialUpdates));

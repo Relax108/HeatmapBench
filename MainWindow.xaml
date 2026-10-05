@@ -16,9 +16,11 @@
             </WrapPanel.Resources>
 
             <TextBlock Text="Renderer" Margin="0,0,4,0" />
-            <ComboBox x:Name="RendererBox" SelectedIndex="0" Width="160">
+            <ComboBox x:Name="RendererBox" SelectedIndex="0" Width="190">
                 <ComboBoxItem Content="ScottPlot (baseline)" />
-                <ComboBoxItem Content="WriteableBitmap" />
+                <ComboBoxItem Content="ScottPlot, OpenGL control" />
+                <ComboBoxItem Content="WriteableBitmap (CPU)" />
+                <ComboBoxItem Content="OpenGL texture (GPU)" />
             </ComboBox>
 
             <TextBlock Text="Grid A" />
