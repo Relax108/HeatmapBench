@@ -1,0 +1,64 @@
+<Window x:Class="HeatmapBench.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Heatmap rendering benchmark" Width="1400" Height="860">
+    <DockPanel>
+        <WrapPanel DockPanel.Dock="Top" Margin="8">
+            <WrapPanel.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="Margin" Value="12,0,4,0" />
+                </Style>
+                <Style TargetType="TextBox">
+                    <Setter Property="Width" Value="70" />
+                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                </Style>
+            </WrapPanel.Resources>
+
+            <TextBlock Text="Renderer" Margin="0,0,4,0" />
+            <ComboBox x:Name="RendererBox" SelectedIndex="0" Width="160">
+                <ComboBoxItem Content="ScottPlot (baseline)" />
+                <ComboBoxItem Content="WriteableBitmap" />
+            </ComboBox>
+
+            <TextBlock Text="Grid A" />
+            <TextBox x:Name="GridABox" Text="830x305" />
+            <TextBlock Text="Grid B" />
+            <TextBox x:Name="GridBBox" Text="830x305" />
+
+            <TextBlock Text="Points per batch" />
+            <TextBox x:Name="PointsBox" Text="500" />
+            <TextBlock Text="Producer cycle (ms)" />
+            <TextBox x:Name="CycleBox" Text="30" Width="40" />
+            <TextBlock Text="Render interval (ms)" />
+            <TextBox x:Name="IntervalBox" Text="10" Width="40" />
+
+            <TextBlock Text="Points" />
+            <ComboBox x:Name="PatternBox" SelectedIndex="0" Width="130">
+                <ComboBoxItem Content="Moving window" />
+                <ComboBoxItem Content="Scattered" />
+            </ComboBox>
+
+            <CheckBox x:Name="PartialBox" Content="Partial updates" IsChecked="True"
+                      VerticalAlignment="Center" Margin="12,0,0,0" />
+
+            <Button x:Name="StartStopButton" Content="Start" Width="70" Margin="16,0,0,0"
+                    Click="StartStop_Click" />
+            <Button Content="Copy results" Width="90" Margin="8,0,0,0" Click="Copy_Click" />
+        </WrapPanel>
+
+        <TextBox x:Name="StatsBox" DockPanel.Dock="Right" Width="540" Margin="0,0,8,8"
+                 IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+                 VerticalScrollBarVisibility="Auto"
+                 Text="Choose a renderer and press Start." />
+
+        <Grid Margin="8,0,8,8">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <ContentControl x:Name="HostA" Grid.Row="0" />
+            <ContentControl x:Name="HostB" Grid.Row="1" />
+        </Grid>
+    </DockPanel>
+</Window>
